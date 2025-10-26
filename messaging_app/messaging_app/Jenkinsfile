@@ -8,45 +8,47 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', 
-                    credentialsId: 'github-token', 
-                    url: 'https://github.com/Happiness7230/alx-backend-python.git'
+                echo 'Cloning repository...'
+                git branch: 'main',
+                    credentialsId: 'github-creds',
+                    url: 'https://github.com/username/messaging-app.git'
             }
         }
 
         stage('Set up Python Environment') {
             steps {
+                echo 'Setting up Python environment...'
                 sh '''
-                python3 -m venv ${VENV_DIR}
-                source ${VENV_DIR}/bin/activate
-                pip3 install --upgrade pip
-                pip3 install -r messaging_app/requirements.txt
+                    python3 -m venv ${VENV_DIR}
+                    source ${VENV_DIR}/bin/activate
+                    pip install --upgrade pip
+                    pip install -r messaging_app/requirements.txt
                 '''
             }
         }
 
         stage('Run Tests with Pytest') {
             steps {
+                echo 'Running tests...'
                 sh '''
-                source ${VENV_DIR}/bin/activate
-                cd messaging_app
-                pytest --maxfail=1 --disable-warnings --junitxml=test-results.xml -v
+                    source ${VENV_DIR}/bin/activate
+                    pytest --maxfail=5 --disable-warnings -q --junitxml=pytest_report.xml
                 '''
             }
         }
 
-        stage('Generate Report') {
+        stage('Archive Test Reports') {
             steps {
-                junit 'messaging_app/test-results.xml'
+                echo 'Archiving test results...'
+                junit 'pytest_report.xml'
             }
         }
     }
 
     post {
         always {
-            echo "Cleaning up environment..."
+            echo 'Cleaning up environment...'
             sh 'rm -rf ${VENV_DIR}'
         }
     }
 }
-
