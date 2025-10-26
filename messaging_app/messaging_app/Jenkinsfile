@@ -2,28 +2,26 @@ pipeline {
     agent any
 
     environment {
-        // Python virtual environment setup
         VENV_DIR = "venv"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git credentialsId: 'github-creds', url: 'https://github.com/username/messaging-app.git', branch: 'main'
+                git branch: 'main', 
+                    credentialsId: 'github-token', 
+                    url: 'https://github.com/Happiness7230/alx-backend-python.git'
             }
         }
 
         stage('Set up Python Environment') {
             steps {
-                // ShiningPanda plugin provides `python` wrapper for virtualenv
-                withPythonEnv('/usr/bin/python3') {
-                    sh '''
-                    python3 -m venv ${VENV_DIR}
-                    source ${VENV_DIR}/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                    '''
-                }
+                sh '''
+                python3 -m venv ${VENV_DIR}
+                source ${VENV_DIR}/bin/activate
+                pip3 install --upgrade pip
+                pip3 install -r messaging_app/requirements.txt
+                '''
             }
         }
 
@@ -31,21 +29,15 @@ pipeline {
             steps {
                 sh '''
                 source ${VENV_DIR}/bin/activate
-                pytest --junitxml=reports/results.xml --html=reports/report.html --self-contained-html
+                cd messaging_app
+                pytest --maxfail=1 --disable-warnings --junitxml=test-results.xml -v
                 '''
             }
         }
 
-        stage('Archive Test Reports') {
+        stage('Generate Report') {
             steps {
-                junit 'reports/results.xml'
-                publishHTML(target: [
-                    allowMissing: false,
-                    keepAll: true,
-                    reportDir: 'reports',
-                    reportFiles: 'report.html',
-                    reportName: 'Pytest HTML Report'
-                ])
+                junit 'messaging_app/test-results.xml'
             }
         }
     }
@@ -57,3 +49,4 @@ pipeline {
         }
     }
 }
+
