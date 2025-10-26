@@ -3,25 +3,22 @@ pipeline {
 
     environment {
         VENV_DIR = "venv"
+        DOCKER_IMAGE = "happiness7230/messaging_app"  // replace with your Docker Hub username/repo
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                echo 'Cloning repository...'
-                git branch: 'main',
-                    credentialsId: 'github-creds',
-                    url: 'https://github.com/username/messaging-app.git'
+                git credentialsId: 'github-creds', url: 'https://github.com/Happiness7230/alx-backend-python.git', branch: 'main'
             }
         }
 
         stage('Set up Python Environment') {
             steps {
-                echo 'Setting up Python environment...'
                 sh '''
                     python3 -m venv ${VENV_DIR}
                     source ${VENV_DIR}/bin/activate
-                    pip3 install --upgrade pip
+                    pip install --upgrade pip
                     pip install -r messaging_app/requirements.txt
                 '''
             }
@@ -29,18 +26,31 @@ pipeline {
 
         stage('Run Tests with Pytest') {
             steps {
-                echo 'Running tests...'
                 sh '''
                     source ${VENV_DIR}/bin/activate
-                    pytest --maxfail=5 --disable-warnings -q --junitxml=pytest_report.xml
+                    pytest messaging_app/tests/ --maxfail=1 --disable-warnings -q
                 '''
             }
         }
 
-        stage('Archive Test Reports') {
+        stage('Build Docker Image') {
             steps {
-                echo 'Archiving test results...'
-                junit 'pytest_report.xml'
+                script {
+                    sh '''
+                        docker build -t ${DOCKER_IMAGE}:latest -f messaging_app/Dockerfile .
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Image to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:latest
+                    '''
+                }
             }
         }
     }
@@ -49,6 +59,12 @@ pipeline {
         always {
             echo 'Cleaning up environment...'
             sh 'rm -rf ${VENV_DIR}'
+        }
+        success {
+            echo '✅ Docker image built and pushed successfully!'
+        }
+        failure {
+            echo '❌ Build failed. Check logs for details.'
         }
     }
 }
