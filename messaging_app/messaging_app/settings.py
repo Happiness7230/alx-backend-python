@@ -98,6 +98,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'messaging_app.wsgi.application'
 
 
+o
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 if os.getenv('USE_MYSQL', 'false').lower() == 'true':
